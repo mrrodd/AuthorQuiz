@@ -7,22 +7,47 @@
             data: React.PropTypes.array.isRequired
         },
         getInitialState: function () {
-            return this.props.data.selectGame();
+            // merges the initial object with the new properties
+            return _.extend({
+                bgClass: 'neutral',
+                showContinue: false
+                }, this.props.data.selectGame()
+            );
+        },
+        handleBookSelected: function (title) {
+            var isCorrect = this.state.checkAnswer(title);
+
+            // setting/changing the state causes React to call the render function
+            this.setState({
+                bgClass: isCorrect ? 'pass' : 'fail',
+                showContinue: isCorrect
+            })
+        },
+        handleContinue: function () {
+            this.setState(this.getInitialState());
         },
         render: function () {
-            return (<div>
-                        <div className="row">
-                            <div className="col-md-4">
-                                <img src={this.state.author.imageUrl} className="authorimage col-md-3" />
-                            </div>
-                            <div className="col-md-7">
-                                {this.state.books.map(function(b) {
-                                    return <Book title={b} />;
-                                }, this)}
-                            </div>
-                            <div className="col-md-1"></div>
+            return (
+                <div>
+                    <div className="row">
+                        <div className="col-md-4">
+                            <img src={this.state.author.imageUrl} className="authorimage col-md-3" />
                         </div>
+                        <div className="col-md-7">
+                            {this.state.books.map(function(b) {
+                                return <Book onBookSelected={this.handleBookSelected} title={b} />;
+                            }, this)}
+                        </div>
+                        <div className={"col-md-1 " + this.state.bgClass}></div>
                     </div>
+                    {this.state.showContinue ? (
+                        <div className="row">
+                            <div className="col-md-12">
+                                <input onClick={this.handleContinue} type="button" className="btn btn-primary btn-lg pull-right" value="Continue" />
+                            </div>                        
+                        </div>) : <span />
+                    } 
+                </div>                
             );
         }
     });
@@ -31,8 +56,14 @@
         propTypes: {
             title: React.PropTypes.string.isRequired
         },
+        handleClick: function () {
+            // effectively the book component now publishes an event called onBookSelected
+            this.props.onBookSelected(this.props.title);
+        },
         render: function () {
-            return <div className="answer"><h4>{this.props.title}</h4></div>;
+            return  <div className="answer" onClick={this.handleClick}>
+                        <h4>{this.props.title}</h4>
+                    </div>;
         }
     });
 
@@ -76,7 +107,7 @@
         }
     ];
 
-    // add a method to initial the game with a random author, books and correct answer
+    // add a method to initialize the game with a random author, books and the correct answer
     data.selectGame = function () {
         var books = _.shuffle(this.reduce(function (p, c, i) {
             return p.concat(c.books);
@@ -90,10 +121,14 @@
                     return author.books.some(function (title) {
                         return title === answer;
                     });
-            })
+            }),
+            checkAnswer: function (title) {
+                return this.author.books.some(function (t) {
+                    return t === title;
+                });
+            }
         };
     };
-
 
     React.renderComponent(<Quiz data={data} />, document.getElementById('app'));
 
